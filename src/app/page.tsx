@@ -1,5 +1,5 @@
-
 'use client'
+import AddTaskModal from '@/components/AddTaskModal'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -12,6 +12,7 @@ export default function Home() {
   const [tasks, setTasks] = useState<any[]>([])
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [loading, setLoading] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => { loadTasks() }, [date])
 
@@ -36,19 +37,13 @@ export default function Home() {
     loadTasks()
   }
 
-    async function addTask() {
-    const title = prompt('Название задачи:')
-    if (!title?.trim()) return
-    
-    const planned_start = prompt('Время начала (например, 10:00):') || null
-    const planned_end = planned_start ? prompt('Время окончания (например, 11:00):') || null : null
-    
+  async function addTask(title: string, start: string | null, end: string | null) {
     const { error } = await supabase.from('tasks').insert({ 
       user_id: 'me', 
       title: title.trim(), 
       task_date: date,
-      planned_start: planned_start,
-      planned_end: planned_end
+      planned_start: start,
+      planned_end: end
     })
     
     if (error) {
@@ -59,7 +54,7 @@ export default function Home() {
     }
   }
 
-    async function deleteTask(id: string) {
+  async function deleteTask(id: string) {
     if (!confirm('Удалить эту задачу?')) return
     
     const { error } = await supabase
@@ -105,7 +100,7 @@ export default function Home() {
           />
         </div>
         <button 
-          onClick={addTask}
+          onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-medium transition transform hover:scale-105 shadow-lg"
         >
           <Plus className="w-5 h-5" />
@@ -144,6 +139,13 @@ export default function Home() {
           )}
         </AnimatePresence>
       )}
+
+      {/* Модальное окно добавления задачи */}
+      <AddTaskModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAdd={addTask}
+      />
     </main>
   )
 }
