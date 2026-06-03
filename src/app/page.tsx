@@ -1,12 +1,13 @@
 'use client'
 import AddTaskModal from '@/components/AddTaskModal'
 import ThemeToggle from '@/components/ThemeToggle'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import TaskItem from '@/components/TaskItem'
 import DailyStats from '@/components/DailyStats'
 import { AnimatePresence } from 'framer-motion'
 import { Plus, Calendar } from 'lucide-react'
+import WeeklyStats from '@/components/WeeklyStats'
 
 export default function Home() {
   const [tasks, setTasks] = useState<any[]>([])
@@ -14,9 +15,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  useEffect(() => { loadTasks() }, [date])
-
-  async function loadTasks() {
+  const loadTasks = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('tasks')
@@ -25,19 +24,28 @@ export default function Home() {
       .eq('task_date', date)
       .order('created_at', { ascending: false })
 
-    if (!error && data) setTasks(data)
+    if (!error && data) {
+      setTasks(data)
+    }
     setLoading(false)
-  }
+  }, [date])
 
-  async function updateStatus(id: string, status: string) {
+  useEffect(() => {
+    loadTasks()
+  }, [loadTasks])
+
+  const updateStatus = useCallback(async (id: string, status: string) => {
     await supabase.from('tasks').update({ 
       status, 
       updated_at: new Date().toISOString() 
     }).eq('id', id)
-    loadTasks()
-  }
+    
+    setTasks(prev => prev.map(task => 
+      task.id === id ? { ...task, status } : task
+    ))
+  }, [])
 
-  async function addTask(title: string, start: string | null, end: string | null) {
+  const addTask = useCallback(async (title: string, start: string | null, end: string | null) => {
     const { error } = await supabase.from('tasks').insert({ 
       user_id: 'me', 
       title: title.trim(), 
@@ -46,15 +54,12 @@ export default function Home() {
       planned_end: end
     })
     
-    if (error) {
-      console.error('Ошибка:', error)
-      alert('Ошибка при добавлении задачи')
-    } else {
-      loadTasks()
+    if (!error) {
+      await loadTasks()
     }
-  }
+  }, [date, loadTasks])
 
-  async function deleteTask(id: string) {
+  const deleteTask = useCallback(async (id: string) => {
     if (!confirm('Удалить эту задачу?')) return
     
     const { error } = await supabase
@@ -62,17 +67,13 @@ export default function Home() {
       .delete()
       .eq('id', id)
     
-    if (error) {
-      console.error('Ошибка при удалении:', error)
-      alert('Ошибка при удалении задачи')
-    } else {
-      loadTasks()
+    if (!error) {
+      setTasks(prev => prev.filter(task => task.id !== id))
     }
-  }
+  }, [])
 
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 pb-24 md:max-w-lg md:mx-auto">
-      {/* Заголовок */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           📅 План на день
@@ -85,10 +86,11 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Статистика */}
       <DailyStats tasks={tasks} />
+      <div className="mb-6">
+        <WeeklyStats />
+      </div>
       
-      {/* Выбор даты и добавление */}
       <div className="flex gap-2 mb-6">
         <div className="flex-1 relative">
           <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -108,7 +110,6 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Список задач */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -140,7 +141,6 @@ export default function Home() {
         </AnimatePresence>
       )}
 
-      {/* Модальное окно добавления задачи */}
       <AddTaskModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

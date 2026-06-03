@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {},
+  allowedDevOrigins: ['192.168.101.40'],
 }
 
 const withPWA = require('@ducanh2912/next-pwa').default({

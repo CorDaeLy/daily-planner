@@ -1,6 +1,7 @@
 'use client'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { CheckCircle2, Clock, XCircle, MinusCircle } from 'lucide-react'
+import { memo } from 'react'
 
 type Task = {
   status: 'pending' | 'partial' | 'done' | 'skipped'
@@ -10,7 +11,7 @@ type Props = {
   tasks: Task[]
 }
 
-export default function DailyStats({ tasks }: Props) {
+function DailyStatsComponent({ tasks }: Props) {
   const stats = {
     total: tasks.length,
     done: tasks.filter(t => t.status === 'done').length,
@@ -32,7 +33,6 @@ export default function DailyStats({ tasks }: Props) {
 
   return (
     <div className="mb-6 space-y-4">
-      {/* Прогресс бар */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -53,7 +53,6 @@ export default function DailyStats({ tasks }: Props) {
         </p>
       </div>
 
-      {/* Круговая диаграмма */}
       {stats.total > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -78,7 +77,6 @@ export default function DailyStats({ tasks }: Props) {
             </PieChart>
           </ResponsiveContainer>
           
-          {/* Легенда */}
           <div className="grid grid-cols-2 gap-2 mt-3">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
@@ -110,3 +108,5 @@ export default function DailyStats({ tasks }: Props) {
     </div>
   )
 }
+
+export default memo(DailyStatsComponent)
