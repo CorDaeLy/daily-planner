@@ -1,6 +1,6 @@
 'use client'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
-import { CheckCircle2, Circle, MinusCircle, XCircle, Clock, Trash2 } from 'lucide-react'
+import { CheckCircle2, Circle, MinusCircle, XCircle, Clock, Trash2, Copy } from 'lucide-react'
 import { memo, useRef } from 'react'
 
 type Task = {
@@ -10,15 +10,17 @@ type Task = {
   planned_start?: string | null
   planned_end?: string | null
   status: 'pending' | 'partial' | 'done' | 'skipped'
+  category?: string
 }
 
 type Props = { 
   task: Task
   onStatus: (id: string, status: string) => void
   onDelete?: (id: string) => void
+  onDuplicate?: (task: Task) => void
 }
 
-function TaskItemComponent({ task, onStatus, onDelete }: Props) {
+function TaskItemComponent({ task, onStatus, onDelete, onDuplicate }: Props) {
   const isDeleting = useRef(false)
   const x = useMotionValue(0)
   
@@ -75,7 +77,6 @@ function TaskItemComponent({ task, onStatus, onDelete }: Props) {
     e.preventDefault()
     e.stopPropagation()
     
-    // Блокировка повторных вызовов
     if (isDeleting.current) return
     isDeleting.current = true
     
@@ -98,7 +99,6 @@ function TaskItemComponent({ task, onStatus, onDelete }: Props) {
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
       className={`relative rounded-xl shadow-sm overflow-hidden ${config.bg} ${config.border}`}
     >
-      {/* Фон при свайпе влево (красный - пропустить) */}
       <motion.div 
         style={{ backgroundColor: bgLeft }}
         className="absolute inset-0 flex items-center justify-start px-6 pointer-events-none"
@@ -109,7 +109,6 @@ function TaskItemComponent({ task, onStatus, onDelete }: Props) {
         </motion.div>
       </motion.div>
 
-      {/* Фон при свайпе вправо (зелёный - готово) */}
       <motion.div 
         style={{ backgroundColor: bgRight }}
         className="absolute inset-0 flex items-center justify-end px-6 pointer-events-none"
@@ -120,7 +119,6 @@ function TaskItemComponent({ task, onStatus, onDelete }: Props) {
         </motion.div>
       </motion.div>
 
-      {/* Основной контент */}
       <motion.div
         style={{ x }}
         drag="x"
@@ -130,10 +128,22 @@ function TaskItemComponent({ task, onStatus, onDelete }: Props) {
       >
         <div className="flex justify-between items-start gap-3">
           <div className="flex-1">
-            <h3 className={`font-medium text-gray-900 dark:text-gray-100 ${
+            <h3 className={`font-medium text-gray-900 dark:text-gray-100 inline-flex items-center flex-wrap ${
               task.status === 'skipped' ? 'line-through opacity-60' : ''
             }`}>
               {task.title}
+              {task.category && task.category !== 'общее' && (
+                <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
+                  task.category === 'работа' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                  task.category === 'спорт' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                  task.category === 'личное' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                  task.category === 'хобби' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                  task.category === 'отдых' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                  'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}>
+                  {task.category}
+                </span>
+              )}
             </h3>
             {task.planned_start && (
               <div className="flex items-center gap-1 mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 rounded-lg px-2 py-1 inline-flex">
@@ -149,7 +159,7 @@ function TaskItemComponent({ task, onStatus, onDelete }: Props) {
             )}
           </div>
           
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-1 items-center">
             <select
               value={task.status}
               onChange={(e) => {
@@ -164,6 +174,24 @@ function TaskItemComponent({ task, onStatus, onDelete }: Props) {
               <option value="done">✅ Готово</option>
               <option value="skipped">⏭️ Пропущено</option>
             </select>
+            
+            {onDuplicate && (
+              <button
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onDuplicate(task)
+                }}
+                className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                title="Повторить завтра"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
             
             {onDelete && (
               <button

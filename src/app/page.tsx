@@ -8,6 +8,8 @@ import DailyStats from '@/components/DailyStats'
 import { AnimatePresence } from 'framer-motion'
 import { Plus, Calendar } from 'lucide-react'
 import WeeklyStats from '@/components/WeeklyStats'
+import QuickTemplates from '@/components/QuickTemplates'
+import TemplateManager from '@/components/TemplateManager'
 
 export default function Home() {
   const [tasks, setTasks] = useState<any[]>([])
@@ -45,19 +47,51 @@ export default function Home() {
     ))
   }, [])
 
-  const addTask = useCallback(async (title: string, start: string | null, end: string | null) => {
+  const addTask = useCallback(async (title: string, start: string | null, end: string | null, category: string = 'общее') => {
     const { error } = await supabase.from('tasks').insert({ 
       user_id: 'me', 
       title: title.trim(), 
       task_date: date,
       planned_start: start,
-      planned_end: end
+      planned_end: end,
+      category: category,
+      status: 'pending'
     })
     
-    if (!error) {
+    if (error) {
+      console.error('Ошибка:', error)
+      alert('Ошибка при добавлении задачи')
+    } else {
       await loadTasks()
     }
   }, [date, loadTasks])
+
+    const applyTemplate = useCallback(async (tasks: Array<{
+    title: string
+    planned_start: string
+    planned_end: string
+    category: string
+  }>) => {
+    const tasksToInsert = tasks.map(t => ({
+      user_id: 'me',
+      title: t.title,
+      task_date: date,
+      planned_start: t.planned_start,
+      planned_end: t.planned_end,
+      category: t.category,
+      status: 'pending'
+    }))
+    
+    const { error } = await supabase.from('tasks').insert(tasksToInsert)
+    
+    if (error) {
+      console.error('Ошибка шаблона:', error)
+      alert('Ошибка при добавлении шаблона')
+    } else {
+      await loadTasks()
+    }
+  }, [date, loadTasks])
+
 
   const deleteTask = useCallback(async (id: string) => {
     if (!confirm('Удалить эту задачу?')) return
@@ -69,6 +103,26 @@ export default function Home() {
     
     if (!error) {
       setTasks(prev => prev.filter(task => task.id !== id))
+    }
+  }, [])
+
+  const duplicateForTomorrow = useCallback(async (task: any) => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+    
+    const { error } = await supabase.from('tasks').insert({
+      user_id: 'me',
+      title: task.title,
+      task_date: tomorrowStr,
+      planned_start: task.planned_start,
+      planned_end: task.planned_end,
+      category: task.category || 'общее',
+      status: 'pending'
+    })
+    
+    if (!error) {
+      alert(`✅ Задача "${task.title}" скопирована на завтра!`)
     }
   }, [])
 
@@ -90,7 +144,7 @@ export default function Home() {
       <div className="mb-6">
         <WeeklyStats />
       </div>
-      
+      <TemplateManager onApplyTemplate={applyTemplate} />
       <div className="flex gap-2 mb-6">
         <div className="flex-1 relative">
           <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -134,6 +188,7 @@ export default function Home() {
                   task={t} 
                   onStatus={updateStatus}
                   onDelete={deleteTask}
+                  onDuplicate={duplicateForTomorrow}
                 />
               ))}
             </div>
